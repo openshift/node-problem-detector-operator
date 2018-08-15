@@ -22,8 +22,10 @@ type NodeProblemDetector struct {
 }
 
 type NodeProblemDetectorSpec struct {
-	// Fill me
+	ImagePrefix     string `json:"imagePrefix"`
+	ImageVersion    string `json:"imageVersion"`
+	ImagePullPolicy string `json:"imagePullPolicy"`
 }
+
 type NodeProblemDetectorStatus struct {
-	// Fill me
 }
