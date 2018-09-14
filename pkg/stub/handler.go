@@ -8,6 +8,7 @@ import (
 
 	"github.com/openshift/node-problem-detector-operator/pkg/apis/node-problem-detector/v1alpha1"
 
+	ossecurityv1 "github.com/openshift/api/security/v1"
 	"github.com/operator-framework/operator-sdk/pkg/sdk"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -43,6 +44,36 @@ func (h *Handler) Handle(ctx context.Context, event sdk.Event) error {
 		err = sdk.Create(crb)
 		if err != nil && !errors.IsAlreadyExists(err) {
 			return fmt.Errorf("failed to create clusterrolebinding for node-problem-detector serviceaccount : %v", err)
+		}
+
+		scc := &ossecurityv1.SecurityContextConstraints{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "SecurityContextConstraints",
+				APIVersion: "security.openshift.io/v1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "privileged",
+			},
+		}
+		err = sdk.Get(scc)
+		if err != nil {
+			return fmt.Errorf("failed to get privileged securitycontextconstraints : %v", err)
+		}
+
+		sccUser := "system:serviceaccount:" + o.Namespace + ":node-problem-detector"
+		sccUserFound := false
+		for _, user := range scc.Users {
+			if user == sccUser {
+				sccUserFound = true
+				break
+			}
+		}
+		if !sccUserFound {
+			scc.Users = append(scc.Users, sccUser)
+			sdk.Update(scc)
+			if err != nil {
+				return fmt.Errorf("failed to add %v to privileged scc : %v", sccUser, err)
+			}
 		}
 
 		ds := newNPDDS(o)
