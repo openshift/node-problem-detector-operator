@@ -119,6 +119,9 @@ func apiResource(gvk schema.GroupVersionKind, restMapper *discovery.DeferredDisc
 		Namespaced: mapping.Scope == meta.RESTScopeNamespace,
 		Kind:       gvk.Kind,
 	}
+	if resource.Name == "securitycontextconstraintses" {
+		resource.Name = "securitycontextconstraints"
+	}
 	return resource, nil
 }
 
