@@ -92,21 +92,13 @@ func (h *Handler) Handle(ctx context.Context, event sdk.Event) error {
 			if c.Name != "node-problem-detector" {
 				continue
 			}
-			image := o.Spec.ImagePrefix + "node-problem-detector:" + o.Spec.ImageVersion
-			if c.Image != image {
-				c.Image = image
-				changed = true
-			}
-			ipp := corev1.PullPolicy(o.Spec.ImagePullPolicy)
-			if c.ImagePullPolicy != ipp {
-				c.ImagePullPolicy = ipp
-				changed = true
-			}
+
 			if changed {
 				sdk.Update(ds)
 				if err != nil {
 					return fmt.Errorf("failed to update node-problem-detector daemonset : %v", err)
 				}
+				break
 			}
 		}
 	}
@@ -202,7 +194,7 @@ func newNPDDS(cr *v1alpha1.NodeProblemDetector) *appsv1.DaemonSet {
 									},
 								},
 							},
-							Image:           cr.Spec.ImagePrefix + "node-problem-detector:" + cr.Spec.ImageVersion,
+							Image:           "openshift/ose-node-problem-detector:v3.12",
 							ImagePullPolicy: corev1.PullPolicy(cr.Spec.ImagePullPolicy),
 							Name:            "node-problem-detector",
 							Resources:       corev1.ResourceRequirements{},

@@ -1,12 +1,97 @@
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: node-problem-detector-operator
+rules:
+- apiGroups:
+  - node-problem-detector.operator.k8s.io
+  resources:
+  - "*"
+  verbs:
+  - "*"
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - events
+  - configmaps
+  - secrets
+  - services
+  - endpoints
+  - serviceaccounts
+  verbs:
+  - "*"
+- apiGroups:
+  - apps
+  resources:
+  - daemonsets
+  verbs:
+  - "*"
+
+---
+
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: node-problem-detector-operator
+subjects:
+- kind: ServiceAccount
+  name: node-problem-detector-operator
+roleRef:
+  kind: Role
+  name: node-problem-detector-operator
+  apiGroup: rbac.authorization.k8s.io
+
+---
+
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: node-problem-detector-operator
+rules:
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  # the operator needs to be able to bind the cluster role
+  # system:node-problem-detector to the node-problem-detector service account
+  - clusterrolebindings
+  verbs:
+  - "*"
+- apiGroups:
+  - security.openshift.io
+  resources:
+  # the operator needs to be able to add the node-problem-detector service account
+  # to the list of accounts that can use the privileged SCC
+  - securitycontextconstraints
+  verbs:
+  - "*"
+
+---
+
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: default-account-node-problem-detector-operator
+  name: node-problem-detector-operator-1
 subjects:
 - kind: ServiceAccount
-  name: default
-  namespace: npdtest
+  name: node-problem-detector-operator
+  namespace: openshift-node-problem-detector
 roleRef:
   kind: ClusterRole
-  name: cluster-admin
+  name: node-problem-detector-operator
+  apiGroup: rbac.authorization.k8s.io
+
+---
+
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: node-problem-detector-operator-2
+subjects:
+- kind: ServiceAccount
+  name: node-problem-detector-operator
+  namespace: openshift-node-problem-detector
+roleRef:
+  kind: ClusterRole
+  name: system:node-problem-detector
   apiGroup: rbac.authorization.k8s.io

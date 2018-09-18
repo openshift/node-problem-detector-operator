@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node-problem-detector-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: node-problem-detector-operator
+  template:
+    metadata:
+      labels:
+        name: node-problem-detector-operator
+    spec:
+      containers:
+        - name: node-problem-detector-operator
+          image: openshift/node-problem-detector-operator:v0.0.1
+          ports:
+          - containerPort: 60000
+            name: metrics
+          command:
+          - node-problem-detector-operator
+          imagePullPolicy: Always
+          env:
+            - name: WATCH_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: OPERATOR_NAME
+              value: "node-problem-detector-operator"
+      serviceAccountName: node-problem-detector-operator
