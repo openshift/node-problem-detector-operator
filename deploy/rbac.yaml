@@ -2,6 +2,7 @@ kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: node-problem-detector-operator
+  namespace: openshift-node-problem-detector
 rules:
 - apiGroups:
   - node-problem-detector.operator.k8s.io
@@ -34,6 +35,7 @@ kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: node-problem-detector-operator
+  namespace: openshift-node-problem-detector
 subjects:
 - kind: ServiceAccount
   name: node-problem-detector-operator
@@ -47,7 +49,7 @@ roleRef:
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: node-problem-detector-operator
+  name: openshift-node-problem-detector-operator
 rules:
 - apiGroups:
   - rbac.authorization.k8s.io
@@ -71,14 +73,14 @@ rules:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: node-problem-detector-operator-1
+  name: openshift-node-problem-detector-operator-1
 subjects:
 - kind: ServiceAccount
   name: node-problem-detector-operator
   namespace: openshift-node-problem-detector
 roleRef:
   kind: ClusterRole
-  name: node-problem-detector-operator
+  name: openshift-node-problem-detector-operator
   apiGroup: rbac.authorization.k8s.io
 
 ---
@@ -86,7 +88,7 @@ roleRef:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: node-problem-detector-operator-2
+  name: openshift-node-problem-detector-operator-2
 subjects:
 - kind: ServiceAccount
   name: node-problem-detector-operator

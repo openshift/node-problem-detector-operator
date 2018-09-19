@@ -1,4 +1,5 @@
-apiVersion: "node-problem-detector.operator.k8s.io/v1alpha1"
-kind: "NodeProblemDetector"
+apiVersion: node-problem-detector.operator.k8s.io/v1alpha1
+kind: NodeProblemDetector
 metadata:
-  name: "node-problem-detector"
+  name: node-problem-detector
+  namespace: openshift-node-problem-detector
