@@ -160,7 +160,7 @@ func newNPDDS(cr *v1alpha1.NodeProblemDetector) *appsv1.DaemonSet {
 			APIVersion: "apps/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "node-problem-detector",
+			Name:      cr.Name,
 			Namespace: cr.Namespace,
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(cr, schema.GroupVersionKind{

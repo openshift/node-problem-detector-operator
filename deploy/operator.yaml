@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: node-problem-detector-operator
+  namespace: openshift-node-problem-detector
 spec:
   replicas: 1
   selector:
@@ -27,5 +28,5 @@ spec:
                 fieldRef:
                   fieldPath: metadata.namespace
             - name: OPERATOR_NAME
-              value: "node-problem-detector-operator"
+              value: node-problem-detector-operator
       serviceAccountName: node-problem-detector-operator
