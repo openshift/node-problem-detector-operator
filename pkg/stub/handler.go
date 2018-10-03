@@ -92,6 +92,11 @@ func (h *Handler) Handle(ctx context.Context, event sdk.Event) error {
 			if c.Name != "node-problem-detector" {
 				continue
 			}
+			ipp := corev1.PullPolicy(o.Spec.ImagePullPolicy)
+			if c.ImagePullPolicy != ipp {
+				c.ImagePullPolicy = ipp
+				changed = true
+			}
 
 			if changed {
 				sdk.Update(ds)
