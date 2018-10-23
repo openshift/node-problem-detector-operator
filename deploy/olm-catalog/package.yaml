@@ -1,0 +1,4 @@
+packageName: nodeproblemdetector
+channels:
+- name: alpha
+  currentCSV: nodeproblemdetector.v0.0.1

@@ -1,0 +1,82 @@
+apiVersion: app.coreos.com/v1alpha1
+kind: ClusterServiceVersion-v1
+metadata:
+  name: nodeproblemdetector.v0.0.1
+  namespace: placeholder
+spec:
+  install:
+    strategy: deployment
+    spec:
+      permissions:
+      - serviceAccountName: node-problem-detector-operator
+        rules:
+        - apiGroups:
+          - node-problem-detector.operator.k8s.io
+          resources:
+          - "*"
+          verbs:
+          - "*"
+        - apiGroups:
+          - ""
+          resources:
+          - pods
+          - services
+          - endpoints
+          - persistentvolumeclaims
+          - events
+          - configmaps
+          - secrets
+          verbs:
+          - "*"
+        - apiGroups:
+          - apps
+          resources:
+          - deployments
+          - daemonsets
+          - replicasets
+          - statefulsets
+          verbs:
+          - "*"
+      deployments:
+      - name: node-problem-detector-operator
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              app: node-problem-detector-operator
+          template:
+            metadata:
+              labels:
+                app: node-problem-detector-operator
+            spec:
+              containers:
+                - name: node-problem-detector-operator-olm-owned
+                  image: registry.svc.ci.openshift.org/openshift/origin-v4.0:node-problem-detector-operator
+                  command:
+                  - node-problem-detector-operator
+                  imagePullPolicy: Always
+                  env:
+                  - name: MY_POD_NAMESPACE
+                    valueFrom:
+                      fieldRef:
+                        fieldPath: metadata.namespace
+                  - name: MY_POD_NAME
+                    valueFrom:
+                      fieldRef:
+                        fieldPath: metadata.name
+              restartPolicy: Always
+              terminationGracePeriodSeconds: 5
+              serviceAccountName: node-problem-detector-operator
+              serviceAccount: node-problem-detector-operator
+  customresourcedefinitions:
+    owned:
+      - description: Represents an instance of a NodeProblemDetector application
+        displayName: NodeProblemDetector Application
+        kind: NodeProblemDetector
+        name: nodeproblemdetectors.node-problem-detector.operator.k8s.io
+        version: 0.0.1
+  version: 0.0.1
+  displayName: NodeProblemDetector
+  labels:
+    olm-owner-enterprise-app: node-problem-detector-operator
+    olm-status-descriptors: nodeproblemdetector.v0.0.1
