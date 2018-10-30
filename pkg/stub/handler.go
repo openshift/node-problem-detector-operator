@@ -19,7 +19,7 @@ import (
 )
 
 var (
-	defaultBinaryPermissions int32 = 0766
+	defaultPluginPermissions int32 = 0766
 )
 
 func NewHandler() sdk.Handler {
@@ -276,7 +276,7 @@ func newNPDDS(cr *v1alpha1.NodeProblemDetector) *appsv1.DaemonSet {
 							Name: "plugins",
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
-									DefaultMode: &defaultBinaryPermissions,
+									DefaultMode: &defaultPluginPermissions,
 									LocalObjectReference: corev1.LocalObjectReference{
 										Name: "node-problem-detector-plugins",
 									},
