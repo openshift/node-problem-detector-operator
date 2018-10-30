@@ -18,6 +18,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+var (
+	defaultPluginPermissions int32 = 0766
+)
+
 func NewHandler() sdk.Handler {
 	return &Handler{}
 }
@@ -32,6 +36,12 @@ func (h *Handler) Handle(ctx context.Context, event sdk.Event) error {
 		err := sdk.Create(cm)
 		if err != nil && !errors.IsAlreadyExists(err) {
 			return fmt.Errorf("failed to create node-problem-detector configmap : %v", err)
+		}
+
+		cmPlugins := newNPDPlugins(o)
+		err = sdk.Create(cmPlugins)
+		if err != nil && !errors.IsAlreadyExists(err) {
+			return fmt.Errorf("failed to create node-problem-detector-plugins configmap : %v", err)
 		}
 
 		sa := newServiceAccount(o)
@@ -187,7 +197,7 @@ func newNPDDS(cr *v1alpha1.NodeProblemDetector) *appsv1.DaemonSet {
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Command: []string{"node-problem-detector", "--logtostderr", "--system-log-monitors=/etc/npd/kernel-monitor.json,/etc/npd/docker-monitor.json"},
+							Command: []string{"node-problem-detector", "--logtostderr", "--system-log-monitors=/etc/npd/kernel-monitor.json,/etc/npd/docker-monitor.json", "--custom-plugin-monitors=/etc/npd/kubelet-monitor.json"},
 							Env: []corev1.EnvVar{
 								{
 									Name: "NODE_NAME",
@@ -223,9 +233,14 @@ func newNPDDS(cr *v1alpha1.NodeProblemDetector) *appsv1.DaemonSet {
 									MountPath: "/etc/npd",
 									Name:      "config",
 								},
+								{
+									MountPath: "/etc/npd-plugins",
+									Name:      "plugins",
+								},
 							},
 						},
 					},
+					HostNetwork:                   true,
 					RestartPolicy:                 "Always",
 					SecurityContext:               &corev1.PodSecurityContext{},
 					ServiceAccountName:            "node-problem-detector",
@@ -253,6 +268,17 @@ func newNPDDS(cr *v1alpha1.NodeProblemDetector) *appsv1.DaemonSet {
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{
 										Name: "node-problem-detector",
+									},
+								},
+							},
+						},
+						{
+							Name: "plugins",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									DefaultMode: &defaultPluginPermissions,
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: "node-problem-detector-plugins",
 									},
 								},
 							},
@@ -346,9 +372,43 @@ func newNPDConfig(cr *v1alpha1.NodeProblemDetector) *corev1.ConfigMap {
     ]
 }
 `
+	kubelet_monitor_json := `
+{
+  "plugin": "custom",
+  "pluginConfig": {
+    "invoke_interval": "120s",
+    "timeout": "60s",
+    "concurrency": 1
+  },
+  "source": "kubelet-custom-plugin-monitor",
+  "conditions": [
+    {
+      "type": "KubeletProblem",
+      "reason": "KubeletIsUp",
+      "message": "kubelet is up"
+    }
+  ],
+  "rules": [
+    {
+      "type": "temporary",
+      "reason": "KubeletIsDown",
+      "path": "/etc/npd-plugins/kubelet-health.sh",
+      "timeout": "30s"
+    },
+    {
+      "type": "permanent",
+      "condition": "KubeletProblem",
+      "reason": "KubeletIsDown",
+      "path": "/etc/npd-plugins/kubelet-health.sh",
+      "timeout": "45s"
+    }
+  ]
+}
+`
 	data := map[string]string{
-		"docker-monitor.json": docker_monitor_json,
-		"kernel-monitor.json": kernel_monitor_json,
+		"docker-monitor.json":  docker_monitor_json,
+		"kernel-monitor.json":  kernel_monitor_json,
+		"kubelet-monitor.json": kubelet_monitor_json,
 	}
 	return &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
@@ -357,6 +417,38 @@ func newNPDConfig(cr *v1alpha1.NodeProblemDetector) *corev1.ConfigMap {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "node-problem-detector",
+			Namespace: cr.Namespace,
+		},
+		Data: data,
+	}
+}
+
+func newNPDPlugins(cr *v1alpha1.NodeProblemDetector) *corev1.ConfigMap {
+	kubelet_health_sh := `#!/usr/bin/env bash
+
+set -eou pipefail
+
+data=$(curl \
+  -s \
+  http://127.0.0.1:10248/healthz
+)
+
+if [[ "$data" != "ok" ]]; then
+  exit 20
+fi
+
+exit 0
+`
+	data := map[string]string{
+		"kubelet-health.sh": kubelet_health_sh,
+	}
+	return &corev1.ConfigMap{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ConfigMap",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "node-problem-detector-plugins",
 			Namespace: cr.Namespace,
 		},
 		Data: data,
