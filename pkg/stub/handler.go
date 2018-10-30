@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/openshift/node-problem-detector-operator/pkg/apis/node-problem-detector/v1alpha1"
+	"github.com/openshift/node-problem-detector-operator/pkg/assets"
 
 	ossecurityv1 "github.com/openshift/api/security/v1"
 	"github.com/operator-framework/operator-sdk/pkg/sdk"
@@ -294,121 +295,10 @@ func newNPDDS(cr *v1alpha1.NodeProblemDetector) *appsv1.DaemonSet {
 }
 
 func newNPDConfig(cr *v1alpha1.NodeProblemDetector) *corev1.ConfigMap {
-	docker_monitor_json := `
-{
-    "plugin": "journald",
-    "pluginConfig": {
-            "source": "docker"
-    },
-    "logPath": "/host/log/journal",
-    "lookback": "5m",
-    "bufferSize": 10,
-    "source": "docker-monitor",
-    "conditions": [],
-    "rules": [
-            {
-                    "type": "temporary",
-                    "reason": "CorruptDockerImage",
-                    "pattern": "Error trying v2 registry: failed to register layer: rename /var/lib/docker/image/(.+) /var/lib/docker/image/(.+): directory not empty.*"
-            }
-    ]
-}
-`
-	kernel_monitor_json := `
-{
-    "plugin": "journald",
-    "pluginConfig": {
-            "source": "kernel"
-    },
-    "logPath": "/host/log/journal",
-    "lookback": "5m",
-    "bufferSize": 10,
-    "source": "kernel-monitor",
-    "conditions": [
-            {
-                    "type": "KernelDeadlock",
-                    "reason": "KernelHasNoDeadlock",
-                    "message": "kernel has no deadlock"
-            }
-    ],
-    "rules": [
-            {
-                    "type": "temporary",
-                    "reason": "OOMKilling",
-                    "pattern": "Kill process \\d+ (.+) score \\d+ or sacrifice child\\nKilled process \\d+ (.+) total-vm:\\d+kB, anon-rss:\\d+kB, file-rss:\\d+kB"
-            },
-            {
-                    "type": "temporary",
-                    "reason": "TaskHung",
-                    "pattern": "task \\S+:\\w+ blocked for more than \\w+ seconds\\."
-            },
-            {
-                    "type": "temporary",
-                    "reason": "UnregisterNetDevice",
-                    "pattern": "unregister_netdevice: waiting for \\w+ to become free. Usage count = \\d+"
-            },
-            {
-                    "type": "temporary",
-                    "reason": "KernelOops",
-                    "pattern": "BUG: unable to handle kernel NULL pointer dereference at .*"
-            },
-            {
-                    "type": "temporary",
-                    "reason": "KernelOops",
-                    "pattern": "divide error: 0000 \\[#\\d+\\] SMP"
-            },
-            {
-                    "type": "permanent",
-                    "condition": "KernelDeadlock",
-                    "reason": "AUFSUmountHung",
-                    "pattern": "task umount\\.aufs:\\w+ blocked for more than \\w+ seconds\\."
-            },
-            {
-                    "type": "permanent",
-                    "condition": "KernelDeadlock",
-                    "reason": "DockerHung",
-                    "pattern": "task docker:\\w+ blocked for more than \\w+ seconds\\."
-            }
-    ]
-}
-`
-	kubelet_monitor_json := `
-{
-  "plugin": "custom",
-  "pluginConfig": {
-    "invoke_interval": "120s",
-    "timeout": "60s",
-    "concurrency": 1
-  },
-  "source": "kubelet-custom-plugin-monitor",
-  "conditions": [
-    {
-      "type": "KubeletProblem",
-      "reason": "KubeletIsUp",
-      "message": "kubelet is up"
-    }
-  ],
-  "rules": [
-    {
-      "type": "temporary",
-      "reason": "KubeletIsDown",
-      "path": "/etc/npd-plugins/kubelet-health.sh",
-      "timeout": "30s"
-    },
-    {
-      "type": "permanent",
-      "condition": "KubeletProblem",
-      "reason": "KubeletIsDown",
-      "path": "/etc/npd-plugins/kubelet-health.sh",
-      "timeout": "45s"
-    }
-  ]
-}
-`
 	data := map[string]string{
-		"docker-monitor.json":  docker_monitor_json,
-		"kernel-monitor.json":  kernel_monitor_json,
-		"kubelet-monitor.json": kubelet_monitor_json,
+		"docker-monitor.json":  assets.ReadAsset(assets.ConfigDockerMonitor),
+		"kernel-monitor.json":  assets.ReadAsset(assets.ConfigKernelMonitor),
+		"kubelet-monitor.json": assets.ReadAsset(assets.ConfigKubeletMonitor),
 	}
 	return &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
@@ -424,23 +314,8 @@ func newNPDConfig(cr *v1alpha1.NodeProblemDetector) *corev1.ConfigMap {
 }
 
 func newNPDPlugins(cr *v1alpha1.NodeProblemDetector) *corev1.ConfigMap {
-	kubelet_health_sh := `#!/usr/bin/env bash
-
-set -eou pipefail
-
-data=$(curl \
-  -s \
-  http://127.0.0.1:10248/healthz
-)
-
-if [[ "$data" != "ok" ]]; then
-  exit 20
-fi
-
-exit 0
-`
 	data := map[string]string{
-		"kubelet-health.sh": kubelet_health_sh,
+		"kubelet-health.sh": assets.ReadAsset(assets.PluginKubeletHealth),
 	}
 	return &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
