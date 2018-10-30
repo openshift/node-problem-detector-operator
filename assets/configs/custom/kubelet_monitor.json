@@ -1,0 +1,28 @@
+{
+    "plugin": "custom",
+    "pluginConfig": {
+        "invoke_interval": "120s",
+        "timeout": "60s",
+        "concurrency": 1
+    },
+    "source": "kubelet-custom-plugin-monitor",
+    "conditions": [{
+        "type": "KubeletProblem",
+        "reason": "KubeletIsUp",
+        "message": "kubelet is up"
+    }],
+    "rules": [{
+            "type": "temporary",
+            "reason": "KubeletIsDown",
+            "path": "/etc/npd-plugins/kubelet-health.sh",
+            "timeout": "30s"
+        },
+        {
+            "type": "permanent",
+            "condition": "KubeletProblem",
+            "reason": "KubeletIsDown",
+            "path": "/etc/npd-plugins/kubelet-health.sh",
+            "timeout": "45s"
+        }
+    ]
+}
