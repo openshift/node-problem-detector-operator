@@ -4,3 +4,4 @@ reviewers:
 approvers:
   - joelsmith
   - sjenning
+component: "Node"
